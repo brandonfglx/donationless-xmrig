@@ -30,10 +30,10 @@ jobs:
         id: compare
         run: |
           if [[ "${{ steps.upstream.outputs.version }}" != "${{ steps.local.outputs.version }}" ]]; then
-          echo "should_build=true" >> $GITHUB_OUTPUT
-        else
-          echo "should_build=false" >> $GITHUB_OUTPUT
-        fi
+            echo "should_build=true" >> $GITHUB_OUTPUT
+          else
+            echo "should_build=false" >> $GITHUB_OUTPUT
+          fi
   build:
     needs: check-version
     if: needs.check-version.outputs.should_build == "true" || github.event_name == "workflow_dispatch"
@@ -126,17 +126,17 @@ jobs:
       - name: Prepare Release Notes and Assets
         run: |
           mkdir release_assets
-        echo -e "See changelog: https://github.com/xmrig/xmrig/releases/tag/${{ needs.check-version.outputs.latest_version }}\n---" > release_notes.md
+          echo -e "See changelog: https://github.com/xmrig/xmrig/releases/tag/${{ needs.check-version.outputs.latest_version }}\n---" > release_notes.md
         
-        for dir in artifacts/*; do
-          if [ -d "$dir" ]; then
-            cp $dir/*.tar.gz release_assets/ 2>/dev/null || cp $dir/*.zip release_assets 2>/dev/null
+          for dir in artifacts/*; do
+            if [ -d "$dir" ]; then
+              cp $dir/*.tar.gz release_assets/ 2>/dev/null || cp $dir/*.zip release_assets 2>/dev/null
             
-            file_name=$(basename $dir)
-            sha_value=$(cat $dir/*.sha256 | tr -d "\r\n ")
-            echo "* \`$file_name\`: \`$sha_value\`" >. release_notes.md
-          fi
-        done
+              file_name=$(basename $dir)
+              sha_value=$(cat $dir/*.sha256 | tr -d "\r\n ")
+              echo "* \`$file_name\`: \`$sha_value\`" >. release_notes.md
+            fi
+          done
       - name: Create Release
         uses: softprops/action-gh-release@v3
         with:
