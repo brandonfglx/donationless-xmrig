@@ -68,11 +68,16 @@ jobs:
         if: matrix.os == 'macos-latest' || matrix.os == 'macos-26-intel'
         run: |
           brew install cmake libuv openssl hwloc
-      - name: Remove Donations for Linux/MacOS
-        if: matrix.os == 'ubuntu-latest' || matrix.os == 'macos-latest' || matrix.os == 'macos-26-intel'
+      - name: Remove Donations for Linux
+        if: matrix.os == 'ubuntu-latest'
         run: |
           sed -i 's/kMinimumDonateLevel = 1/kMinimumDonateLevel = 0/g' src/donate.h
           sed -i 's/kDefaultDonateLevel = 1/kDefaultDonateLevel = 0/g' src/donate.h
+      - name: Remove Donations for MacOS
+        if: matrix.os == 'macos-latest' || matrix.os == 'macos-26-intel'
+        run: |
+          sed -i '' 's/kMinimumDonateLevel = 1/kMinimumDonateLevel = 0/g' src/donate.h
+          sed -i '' 's/kDefaultDonateLevel = 1/kDefaultDonateLevel = 0/g' src/donate.h
       - name: Remove Donations for Windows
         if: matrix.os == 'windows-latest'
         run: |
