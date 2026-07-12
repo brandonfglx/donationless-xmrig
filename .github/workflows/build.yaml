@@ -3,7 +3,7 @@ name: donationless-xmrig
 on:
   workflow_dispatch:
   schedule:
-    - cron: "0 0 * * 0"
+    - cron: '0 0 * * 0'
 
 permissions:
   contents: write
@@ -18,25 +18,25 @@ jobs:
       - name: Get upstream XMRig version
         id: upstream
         run: |
-          VERSION=$(curl -s https://api.github.com/repos/xmrig/xmrig/releases/latest | jq -r ".tag_name")
-          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          VERSION=$(curl -s https://api.github.com/repos/xmrig/xmrig/releases/latest | jq -r '.tag_name')
+          echo 'version=$VERSION' >> $GITHUB_OUTPUT
       - name: Get current XMRig version
         id: local
         run: |
-          VERSION=$(curl -s https://github.com{{ github.repository }}/releases/latest | jq -r ".tag_name")
-          if [[ "$VERSION" = "null" ]]; then VERSION="none"; fi
-          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          VERSION=$(curl -s https://github.com{{ github.repository }}/releases/latest | jq -r '.tag_name')
+          if [[ '$VERSION' = 'null' ]]; then VERSION='none'; fi
+          echo 'version=$VERSION' >> $GITHUB_OUTPUT
       - name: Compare versions
         id: compare
         run: |
-          if [[ "${{ steps.upstream.outputs.version }}" != "${{ steps.local.outputs.version }}" ]]; then
-            echo "should_build=true" >> $GITHUB_OUTPUT
+          if [[ '${{ steps.upstream.outputs.version }}' != '${{ steps.local.outputs.version }}' ]]; then
+            echo 'should_build=true' >> $GITHUB_OUTPUT
           else
-            echo "should_build=false" >> $GITHUB_OUTPUT
+            echo 'should_build=false' >> $GITHUB_OUTPUT
           fi
   build:
     needs: check-version
-    if: needs.check-version.outputs.should_build == "true" || github.event_name == "workflow_dispatch"
+    if: needs.check-version.outputs.should_build == 'true' || github.event_name == 'workflow_dispatch'
     strategy:
       matrix:
         include:
@@ -60,51 +60,51 @@ jobs:
           repository: xmrig/xmrig
           ref: ${{ needs.check-version.outputs.latest_version }}
       - name: Install Linux dependencies
-        if: matrix.os == "ubuntu-latest"
+        if: matrix.os == 'ubuntu-latest'
         run: |
           sudo apt-get update
           sudo apt-get install -y git build-essential cmake libuv1-dev libssl-dev libhwloc-dev
       - name: Install MacOS dependencies
-        if: matrix.os == "macos-latest" || matrix.os == "macos-26-intel"
+        if: matrix.os == 'macos-latest' || matrix.os == 'macos-26-intel'
         run: |
           brew install cmake libuv openssl hwloc
       - name: Remove Donations for Linux/MacOS
-        if: matrix.os == "ubuntu-latest" || matrix.os == "macos-latest" || matrix.os == "macos-26-intel"
+        if: matrix.os == 'ubuntu-latest' || matrix.os == 'macos-latest' || matrix.os == 'macos-26-intel'
         run: |
-          sed -i "s/kMinimumDonateLevel = 1/kMinimumDonateLevel = 0/g" src/donate.h
-          sed -i "s/kDefaultDonateLevel = 1/kDefaultDonateLevel = 0/g" src/donate.h
+          sed -i 's/kMinimumDonateLevel = 1/kMinimumDonateLevel = 0/g' src/donate.h
+          sed -i 's/kDefaultDonateLevel = 1/kDefaultDonateLevel = 0/g' src/donate.h
       - name: Remove Donations for Windows
-        if: matrix.os == "windows-latest"
+        if: matrix.os == 'windows-latest'
         run: |
-          (Get-Content src/donate.h) -replace "kMinimumDonateLevel = 1", "kMinimumDonateLevel = 0" | Set-Content src/donate.h
-          (Get-Content src/donate.h) -replace "kDefaultDonateLevel = 1", "kDefaultDonateLevel = 0" | Set-Content src/donate.h
+          (Get-Content src/donate.h) -replace 'kMinimumDonateLevel = 1', 'kMinimumDonateLevel = 0' | Set-Content src/donate.h
+          (Get-Content src/donate.h) -replace 'kDefaultDonateLevel = 1', 'kDefaultDonateLevel = 0' | Set-Content src/donate.h
       - name: Build Donationless XMRig for Linux
-        if: matrix.os == "ubuntu-latest"
+        if: matrix.os == 'ubuntu-latest'
         run: |
           mkdir build && cd build
           cmake .. -DXMRIG_DEPS=OFF
           make -j$(nproc)
           tar -czf ${{ matrix.artifact_name }} xmrig
       - name: Build Donationless XMRig for MacOS
-        if: matrix.os == "macos-latest" || matrix.os == "macos-26-intel"
+        if: matrix.os == 'macos-latest' || matrix.os == 'macos-26-intel'
         run: |
           mkdir build && cd build
           cmake .. -DXMRIG_DEPS=OFF
           make -j$(sysctl -n hw.logicalcpu)
           tar -czf ${{ matrix.artifact_name }} xmrig
       - name: Build Donationless XMRig for Windows
-        if: matrix.os == "windows-latest"
+        if: matrix.os == 'windows-latest'
         run: |
           mkdir build; cd build
-          cmake .. -G "Visual Studio 17 2022" -A x64
+          cmake .. -G 'Visual Studio 17 2022' -A x64
           cmake --build . --config Release
           Compress-Archive -Path Release\xmrig.exe -DestinationPath ${{ matrix.artifact_name }}
       - name: Generate SHA256 for Linux/MacOS
-        if: matrix.os == "ubuntu-latest" || matrix.os == "macos-latest" || matrix.os == "macos-26-intel"
+        if: matrix.os == 'ubuntu-latest' || matrix.os == 'macos-latest' || matrix.os == 'macos-26-intel'
         run: |
-          shasum -a 256 build/${{ matrix.artifact_name }} | awk "{print $1}" > build/${{ matrix.artifact_name }}.sha256
+          shasum -a 256 build/${{ matrix.artifact_name }} | awk '{print $1}' > build/${{ matrix.artifact_name }}.sha256
       - name: Generate SHA256 for Windows
-        if: matrix.os == "windows-latest"
+        if: matrix.os == 'windows-latest'
         run: |
           $hash = (Get-FileHash build\${{ matrix.artifact_name }} -Algorithm SHA256).Hash.ToLower()
           Out-File -InputObject $hash -FilePath build\${{ matrix.artifact_name }}.sha256 -Encoding ascii
@@ -126,15 +126,15 @@ jobs:
       - name: Prepare Release Notes and Assets
         run: |
           mkdir release_assets
-          echo -e "See changelog: https://github.com/xmrig/xmrig/releases/tag/${{ needs.check-version.outputs.latest_version }}\n---\n### SHA256 Checksums" > release_notes.md
+          echo -e 'See changelog: https://github.com/xmrig/xmrig/releases/tag/${{ needs.check-version.outputs.latest_version }}\n---\n### SHA256 Checksums' > release_notes.md
         
           for dir in artifacts/*; do
-            if [ -d "$dir" ]; then
+            if [ -d '$dir' ]; then
               cp $dir/*.tar.gz release_assets/ 2>/dev/null || cp $dir/*.zip release_assets 2>/dev/null
             
               file_name=$(basename $dir)
-              sha_value=$(cat $dir/*.sha256 | tr -d "\r\n ")
-              echo "* \`$file_name\`: \`$sha_value\`" >> release_notes.md
+              sha_value=$(cat $dir/*.sha256 | tr -d '\r\n ')
+              echo '* \`$file_name\`: \`$sha_value\`' >> release_notes.md
             fi
           done
       - name: Create Release
