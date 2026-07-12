@@ -94,14 +94,21 @@ jobs:
         if: matrix.os == 'macos-latest' || matrix.os == 'macos-26-intel'
         run: |
           mkdir build && cd build
-          cmake .. -DXMRIG_DEPS=OFF
+          cmake .. -DXMRIG_DEPS=OFF -DOPENSSL_ROOT_DIR=$(brew --prefix openssl)
           make -j$(sysctl -n hw.logicalcpu)
           tar -czf ${{ matrix.artifact_name }} xmrig
+      - name: Download XMRig dependencies
+        if: matrix.os == 'windows-latest'
+        run: |
+          Invoke-WebRequest -Uri https://github.com/xmrig/xmrig-deps/archive/refs/heads/master.zip -OutFile xmrig-deps.zip
+          Expand-Archive -Path xmrig-deps.zip -DestinationPath C:\xmrig-deps-tmp
+          Move-Item C:\xmrig-deps-tmp\xmrig-deps-master\* C:\xmrig-deps -Force
+          Remove-Item C:\xmrig-deps-tmp -Recurse -Force
       - name: Build Donationless XMRig for Windows
         if: matrix.os == 'windows-latest'
         run: |
           mkdir build; cd build
-          cmake .. -A x64
+          cmake .. -A x64 -DXMRIG_DEPS=C:\xmrig-deps\msvc2022\x64
           cmake --build . --config Release
           Compress-Archive -Path Release\xmrig.exe -DestinationPath ${{ matrix.artifact_name }}
       - name: Generate SHA256 for Linux/MacOS
