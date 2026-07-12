@@ -14,12 +14,15 @@ jobs:
     outputs:
       should_build: ${{ steps.compare.outputs.should_build }}
       latest_version: ${{ steps.upstream.outputs.version }}
+      version_stripped: ${{ steps.upstream.outputs.version_stripped }}
     steps:
       - name: Get upstream XMRig version
         id: upstream
         run: |
           VERSION=$(curl -s https://api.github.com/repos/xmrig/xmrig/releases/latest | jq -r '.tag_name')
           echo "version=$VERSION" >> $GITHUB_OUTPUT
+          STRIPPED="${VERSION#v}"
+          echo "version_stripped=$STRIPPED" >> $GITHUB_OUTPUT
       - name: Get current XMRig version
         id: local
         run: |
@@ -41,17 +44,17 @@ jobs:
       matrix:
         include:
           - os: ubuntu-latest
-            artifact_name: xmrig-linux-x64.tar.gz
-            asset_path: build/xmrig-linux-x64.tar.gz
+            artifact_name: xmrig-${{ needs.check-version.outputs.version_stripped }}-linux-static-x64.tar.gz
+            asset_path: build/xmrig-${{ needs.check-version.outputs.version_stripped }}-linux-static-x64.tar.gz
           - os: windows-latest
-            artifact_name: xmrig-windows-x64.zip
-            asset_path: build/xmrig-windows-x64.zip
+            artifact_name: xmrig-${{ needs.check-version.outputs.version_stripped }}-windows-x64.zip
+            asset_path: build/xmrig-${{ needs.check-version.outputs.version_stripped }}-windows-x64.zip
           - os: macos-latest
-            artifact_name: xmrig-macos-arm64.tar.gz
-            asset_path: build/xmrig-macos-arm64.tar.gz
+            artifact_name: xmrig-${{ needs.check-version.outputs.version_stripped }}-macos-arm64.tar.gz
+            asset_path: build/xmrig-${{ needs.check-version.outputs.version_stripped }}-macos-arm64.tar.gz
           - os: macos-26-intel
-            artifact_name: xmrig-macos-x64.tar.gz
-            asset_path: build/xmrig-macos-x64.tar.gz
+            artifact_name: xmrig-${{ needs.check-version.outputs.version_stripped }}-macos-x64.tar.gz
+            asset_path: build/xmrig-${{ needs.check-version.outputs.version_stripped }}-macos-x64.tar.gz
     runs-on: ${{ matrix.os }}
     steps:
       - name: Checkout upstream XMRig
@@ -68,6 +71,13 @@ jobs:
         if: matrix.os == 'macos-latest' || matrix.os == 'macos-26-intel'
         run: |
           brew install cmake libuv openssl hwloc
+      - name: Download Windows dependencies
+        if: matrix.os == 'windows-latest'
+        run: |
+          Invoke-WebRequest -Uri https://github.com/xmrig/xmrig-deps/archive/refs/heads/master.zip -OutFile xmrig-deps.zip
+          Expand-Archive -Path xmrig-deps.zip -DestinationPath C:\xmrig-deps-tmp
+          Move-Item C:\xmrig-deps-tmp\xmrig-deps-master\* C:\xmrig-deps -Force
+          Remove-Item C:\xmrig-deps-tmp -Recurse -Force
       - name: Remove Donations for Linux
         if: matrix.os == 'ubuntu-latest'
         run: |
@@ -97,13 +107,6 @@ jobs:
           cmake .. -DXMRIG_DEPS=OFF -DOPENSSL_ROOT_DIR=$(brew --prefix openssl)
           make -j$(sysctl -n hw.logicalcpu)
           tar -czf ${{ matrix.artifact_name }} xmrig
-      - name: Download XMRig dependencies
-        if: matrix.os == 'windows-latest'
-        run: |
-          Invoke-WebRequest -Uri https://github.com/xmrig/xmrig-deps/archive/refs/heads/master.zip -OutFile xmrig-deps.zip
-          Expand-Archive -Path xmrig-deps.zip -DestinationPath C:\xmrig-deps-tmp
-          Move-Item C:\xmrig-deps-tmp\xmrig-deps-master\* C:\xmrig-deps -Force
-          Remove-Item C:\xmrig-deps-tmp -Recurse -Force
       - name: Build Donationless XMRig for Windows
         if: matrix.os == 'windows-latest'
         run: |
@@ -153,7 +156,7 @@ jobs:
         uses: softprops/action-gh-release@v3
         with:
           tag_name: ${{ needs.check-version.outputs.latest_version }}
-          name: Donationless XMRig ${{ needs.check-version.outputs.latest_version }}
+          name: ${{ needs.check-version.outputs.latest_version }}
           body_path: release_notes.md
           files: release_assets/*
         env:
