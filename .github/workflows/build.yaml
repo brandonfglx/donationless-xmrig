@@ -63,7 +63,7 @@ jobs:
         if: matrix.os == "ubuntu-latest"
         run: |
           sudo apt-get update
-        sudo apt-get install -y git build-essential cmake libuv1-dev libssl-dev libhwloc-dev
+          sudo apt-get install -y git build-essential cmake libuv1-dev libssl-dev libhwloc-dev
       - name: Install MacOS dependencies
         if: matrix.os == "macos-latest" || matrix.os == "macos-26-intel"
         run: |
@@ -77,28 +77,28 @@ jobs:
         if: matrix.os == "windows-latest"
         run: |
           (Get-Content src/donate.h) -replace "kMinimumDonateLevel = 1", "kMinimumDonateLevel = 0" | Set-Content src/donate.h
-        (Get-Content src/donate.h) -replace "kDefaultDonateLevel = 1", "kMinimumDonateLevel = 0" | Set-Content src/donate.h
+          (Get-Content src/donate.h) -replace "kDefaultDonateLevel = 1", "kMinimumDonateLevel = 0" | Set-Content src/donate.h
       - name: Build Donationless XMRig for Linux
         if: matrix.os == "ubuntu-latest"
         run: |
           mkdir build && cd build
-        cmake .. -DXMRIG_DEPS=OFF
-        make -j$(nproc)
-        tar -czf ${{ matrix.artifact_name }} xmrig
+          cmake .. -DXMRIG_DEPS=OFF
+          make -j$(nproc)
+          tar -czf ${{ matrix.artifact_name }} xmrig
       - name: Build Donationless XMRig for MacOS
         if: matrix.os == "macos-latest" || matrix.os == "macos-26-intel"
         run: |
           mkdir build && cd build
-        cmake .. -DXMRIG_DEPS=OFF
-        make -j$(sysctl -n hw.logicalcpu)
-        tar -czf ${{ matrix.artifact_name }} xmrig
+          cmake .. -DXMRIG_DEPS=OFF
+          make -j$(sysctl -n hw.logicalcpu)
+          tar -czf ${{ matrix.artifact_name }} xmrig
       - name: Build Donationless XMRig for Windows
         if: matrix.os == "windows-latest"
         run: |
           mkdir build; cd build
-        cmake .. -G "Visual Studio 17 2022" -A x64
-        cmake --build . --config Release
-        Compress-Archive -Path Release\xmrig.exe -DestinationPath ${{ matrix.artifact_name }}
+          cmake .. -G "Visual Studio 17 2022" -A x64
+          cmake --build . --config Release
+          Compress-Archive -Path Release\xmrig.exe -DestinationPath ${{ matrix.artifact_name }}
       - name: Generate SHA256 for Linux/MacOS
         if: matrix.os == "ubuntu-latest" || matrix.os == "macos-latest" || matrix.os == "macos-26-intel"
         run: |
@@ -107,7 +107,7 @@ jobs:
         if: matrix.os == "windows-latest"
         run: |
           $hash = (Get-FileHash build\${{ matrix.artifact_name }} -Algorithm SHA256).Hash.ToLower()
-        Out-File -InputObject $hash -FilePath build\${{ matrix.artifact_name }}.sha256 -Encoding ascii
+          Out-File -InputObject $hash -FilePath build\${{ matrix.artifact_name }}.sha256 -Encoding ascii
       - name: Upload All Artifacts
         uses: actions/upload-artifact@v7
         with:
