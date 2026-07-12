@@ -19,13 +19,13 @@ jobs:
         id: upstream
         run: |
           VERSION=$(curl -s https://api.github.com/repos/xmrig/xmrig/releases/latest | jq -r '.tag_name')
-          echo 'version=$VERSION' >> $GITHUB_OUTPUT
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
       - name: Get current XMRig version
         id: local
         run: |
-          VERSION=$(curl -s https://github.com{{ github.repository }}/releases/latest | jq -r '.tag_name')
-          if [[ '$VERSION' = 'null' ]]; then VERSION='none'; fi
-          echo 'version=$VERSION' >> $GITHUB_OUTPUT
+          VERSION=$(curl -s https://api.github.com/repos/${{ github.repository }}/releases/latest | jq -r '.tag_name')
+          if [[ "$VERSION" = 'null' ]]; then VERSION='none'; fi
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
       - name: Compare versions
         id: compare
         run: |
@@ -129,12 +129,12 @@ jobs:
           echo -e 'See changelog: https://github.com/xmrig/xmrig/releases/tag/${{ needs.check-version.outputs.latest_version }}\n---\n### SHA256 Checksums' > release_notes.md
         
           for dir in artifacts/*; do
-            if [ -d '$dir' ]; then
-              cp $dir/*.tar.gz release_assets/ 2>/dev/null || cp $dir/*.zip release_assets 2>/dev/null
+            if [ -d "$dir" ]; then
+              cp "$dir"/*.tar.gz release_assets/ 2>/dev/null || cp "$dir"/*.zip release_assets/ 2>/dev/null
             
-              file_name=$(basename $dir)
-              sha_value=$(cat $dir/*.sha256 | tr -d '\r\n ')
-              echo '* \`$file_name\`: \`$sha_value\`' >> release_notes.md
+              file_name=$(basename "$dir")
+              sha_value=$(cat "$dir"/*.sha256 | tr -d '\r\n ')
+              echo "* \`$file_name\`: \`$sha_value\`" >> release_notes.md
             fi
           done
       - name: Create Release
