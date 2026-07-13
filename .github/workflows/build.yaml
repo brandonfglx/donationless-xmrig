@@ -70,7 +70,7 @@ jobs:
       - name: Install MacOS dependencies
         if: matrix.os == 'macos-latest' || matrix.os == 'macos-26-intel'
         run: |
-          brew install cmake libuv openssl hwloc
+          brew install cmake wget automake libtool autoconf
       - name: Download Windows dependencies
         if: matrix.os == 'windows-latest'
         run: |
@@ -103,8 +103,9 @@ jobs:
       - name: Build Donationless XMRig for MacOS
         if: matrix.os == 'macos-latest' || matrix.os == 'macos-26-intel'
         run: |
-          mkdir build && cd build
-          cmake .. -DOPENSSL_ROOT_DIR=$(brew --prefix openssl)
+          mkdir build && cd scripts
+          ./build.hwloc.sh && cd ../build
+          cmake .. -DOPENSSL_ROOT_DIR=$(brew --prefix openssl) -DHWLOC_INCLUDE_DIR=../scripts/deps/include -DHWLOC_LIBRARY=../scripts/deps/lib/libhwloc.a
           make -j$(sysctl -n hw.logicalcpu)
           tar -czf ${{ matrix.artifact_name }} xmrig
       - name: Build Donationless XMRig for Windows
