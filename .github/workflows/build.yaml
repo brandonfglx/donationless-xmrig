@@ -1,6 +1,8 @@
 name: donationless-xmrig
 
 on:
+  push:
+    branches: main
   workflow_dispatch:
   schedule:
     - cron: '0 0 * * 0'
@@ -31,8 +33,11 @@ jobs:
           echo "version=$VERSION" >> $GITHUB_OUTPUT
       - name: Compare versions
         id: compare
+        env:
+          UPSTREAM_VERSION: ${{ steps.upstream.outputs.version }}
+          LOCAL_VERSION: ${{ steps.local.outputs.version }}
         run: |
-          if [[ '${{ steps.upstream.outputs.version }}' != '${{ steps.local.outputs.version }}' ]]; then
+          if [[ "$UPSTREAM_VERSION" != "$LOCAL_VERSION" ]] || [[ "$GITHUB_EVENT_NAME" = "workflow_dispatch" ]] || [[ "$GITHUB_EVENT_NAME" = "push" ]]; then
             echo 'should_build=true' >> $GITHUB_OUTPUT
           else
             echo 'should_build=false' >> $GITHUB_OUTPUT
@@ -52,9 +57,6 @@ jobs:
           - os: macos-latest
             artifact_name: xmrig-${{ needs.check-version.outputs.version_stripped }}-macos-arm64.tar.gz
             asset_path: build/xmrig-${{ needs.check-version.outputs.version_stripped }}-macos-arm64.tar.gz
-          - os: macos-26-intel
-            artifact_name: xmrig-${{ needs.check-version.outputs.version_stripped }}-macos-x64.tar.gz
-            asset_path: build/xmrig-${{ needs.check-version.outputs.version_stripped }}-macos-x64.tar.gz
     runs-on: ${{ matrix.os }}
     steps:
       - name: Checkout upstream XMRig
@@ -66,11 +68,11 @@ jobs:
         if: matrix.os == 'ubuntu-latest'
         run: |
           sudo apt-get update
-          sudo apt-get install -y git build-essential cmake libuv1-dev libssl-dev libhwloc-dev
+          sudo apt-get install -y git build-essential cmake wget automake libtool autoconf
       - name: Install MacOS dependencies
-        if: matrix.os == 'macos-latest' || matrix.os == 'macos-26-intel'
+        if: matrix.os == 'macos-latest'
         run: |
-          brew install cmake wget automake libtool autoconf
+          brew install cmake wget automake libtool autoconf openssl@3
       - name: Download Windows dependencies
         if: matrix.os == 'windows-latest'
         run: |
@@ -84,7 +86,7 @@ jobs:
           sed -i 's/kMinimumDonateLevel = 1/kMinimumDonateLevel = 0/g' src/donate.h
           sed -i 's/kDefaultDonateLevel = 1/kDefaultDonateLevel = 0/g' src/donate.h
       - name: Remove Donations for MacOS
-        if: matrix.os == 'macos-latest' || matrix.os == 'macos-26-intel'
+        if: matrix.os == 'macos-latest'
         run: |
           sed -i '' 's/kMinimumDonateLevel = 1/kMinimumDonateLevel = 0/g' src/donate.h
           sed -i '' 's/kDefaultDonateLevel = 1/kDefaultDonateLevel = 0/g' src/donate.h
@@ -96,16 +98,16 @@ jobs:
       - name: Build Donationless XMRig for Linux
         if: matrix.os == 'ubuntu-latest'
         run: |
-          mkdir build && cd build
-          cmake ..
-          make -j$(nproc)
-          tar -czf ${{ matrix.artifact_name }} xmrig
+          (cd scripts && ./build_deps.sh)
+          cmake -S . -B build -DXMRIG_DEPS="$GITHUB_WORKSPACE/scripts/deps" -DBUILD_STATIC=ON
+          cmake --build build -j"$(nproc)"
+          tar -czf "build/${{ matrix.artifact_name }}" -C build xmrig
       - name: Build Donationless XMRig for MacOS
-        if: matrix.os == 'macos-latest' || matrix.os == 'macos-26-intel'
+        if: matrix.os == 'macos-latest'
         run: |
           mkdir build && cd scripts
           ./build.hwloc.sh && cd ../build
-          cmake .. -DOPENSSL_ROOT_DIR=$(brew --prefix openssl) -DHWLOC_INCLUDE_DIR=../scripts/deps/include -DHWLOC_LIBRARY=../scripts/deps/lib/libhwloc.a
+          cmake .. -DOPENSSL_ROOT_DIR=$(brew --prefix openssl@3) -DHWLOC_INCLUDE_DIR=../scripts/deps/include -DHWLOC_LIBRARY=../scripts/deps/lib/libhwloc.a
           make -j$(sysctl -n hw.logicalcpu)
           tar -czf ${{ matrix.artifact_name }} xmrig
       - name: Build Donationless XMRig for Windows
@@ -116,7 +118,7 @@ jobs:
           cmake --build . --config Release
           Compress-Archive -Path Release\xmrig.exe -DestinationPath ${{ matrix.artifact_name }}
       - name: Generate SHA256 for Linux/MacOS
-        if: matrix.os == 'ubuntu-latest' || matrix.os == 'macos-latest' || matrix.os == 'macos-26-intel'
+        if: matrix.os == 'ubuntu-latest' || matrix.os == 'macos-latest'
         run: |
           shasum -a 256 build/${{ matrix.artifact_name }} | awk '{print $1}' > build/${{ matrix.artifact_name }}.sha256
       - name: Generate SHA256 for Windows
